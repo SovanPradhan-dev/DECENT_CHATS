@@ -1,0 +1,9 @@
+{
+  "name": "ChatWave",
+  "short_name": "ChatWave",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d14",
+  "theme_color": "#7966f5",
+  "icons": []
+}
