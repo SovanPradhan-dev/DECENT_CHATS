@@ -17,6 +17,8 @@ All routes are prefixed with `/api`. Protected routes require the HTTP-only `Goo
 | PATCH | `/conversations/:id/mute` | Mute an individual conversation |
 | POST | `/conversations/:id/leave` | Leave a group |
 | GET/POST | `/messages/:conversationId`, `/messages` | Paginated history and message send |
+| POST | `/conversations/:id/polls` | Create a conversation poll with 2–6 distinct options |
+| POST | `/messages/:id/poll/vote`, `/messages/:id/poll/close` | Cast or change a vote, or close a poll; only its creator can close it |
 | PATCH/DELETE | `/messages/:id` | Edit or delete own message |
 | POST | `/messages/:id/read` | Mark conversation messages read |
 | GET/PATCH | `/notifications`, `/notifications/:id/read`, `/notifications/read-all` | Notification center data |
@@ -26,3 +28,4 @@ All routes are prefixed with `/api`. Protected routes require the HTTP-only `Goo
 | GET | `/admin/statistics` | Administrator statistics |
 
 History supports `limit` (maximum 100), `before` (timestamp), and `q` (message content search) query parameters. Uploads are limited to 10 MB and an allowlist of image, PDF, text, DOC/DOCX, and XLS/XLSX MIME types.
+Polls support 2–6 distinct options, are visible to conversation members, and update through the existing `message:new` and `message:updated` socket events.

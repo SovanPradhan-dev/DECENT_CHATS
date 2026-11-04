@@ -15,4 +15,6 @@ Socket.IO shares the Express origin and authenticates from the HTTP-only session
 | Server → clients | `user:online`, `user:offline` | `{ userId, lastSeen? }`; offline occurs after the final device disconnects |
 | Server → room | `message:updated`, `message:deleted`, `message:read` | Persisted message state updates |
 
+Poll creation emits `message:new`; votes and poll closures emit `message:updated` with the updated poll. Poll mutations use the authenticated REST API and verify conversation membership.
+
 Message sends have a per-connection rate limit and are idempotent for a sender/conversation `clientMessageId`. Rooms are user-specific or membership-protected conversation rooms. Socket.IO uses WebSocket with HTTP long-polling fallback.

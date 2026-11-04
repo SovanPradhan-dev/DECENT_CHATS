@@ -318,9 +318,83 @@ router.post('/messages', authRequired, asyncHandler(async (req, res) => {
   }
   res.status(201).json({ message });
 }));
+router.post('/conversations/:id/polls', authRequired, asyncHandler(async (req, res) => {
+  if (!validId(req.params.id)) return res.status(404).json({ error: 'Conversation not found.' });
+  const data = parse(z.object({
+    clientMessageId: z.string().min(8).max(100),
+    question: z.string().trim().min(3).max(180),
+    options: z.array(z.string().trim().min(1).max(80)).min(2).max(6)
+  }), req.body);
+  const conversation = await membership(req.params.id, req.user.id);
+  if (!conversation) return res.status(404).json({ error: 'Conversation not found.' });
+  if (new Set(data.options.map(option => option.toLowerCase())).size !== data.options.length) {
+    return res.status(400).json({ error: 'Poll options must be different.' });
+  }
+  const existed = await Message.exists({ conversationId: conversation.id, senderId: req.user.id, clientMessageId: data.clientMessageId });
+  const message = await Message.findOneAndUpdate(
+    { conversationId: conversation.id, senderId: req.user.id, clientMessageId: data.clientMessageId },
+    { $setOnInsert: { content: data.question, messageType: 'poll', poll: { question: data.question, options: data.options }, readBy: [{ userId: req.user.id }] } },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  ).populate('senderId', 'username fullName avatar');
+  const io = req.app.get('io');
+  if (!existed) {
+    conversation.lastMessage = message._id;
+    conversation.updatedAt = new Date();
+    await conversation.save();
+    io.to(`conversation:${conversation.id}`).emit('message:new', { message });
+    for (const recipientId of conversation.participants.filter(id => String(id) !== req.user.id)) {
+      const notification = await Notification.create({
+        userId: recipientId, senderId: req.user.id, conversationId: conversation.id, messageId: message.id,
+        title: conversation.type === 'group' ? conversation.groupInfo.name : req.user.fullName,
+        body: `Poll: ${data.question}`.slice(0, 180)
+      });
+      io.to(`user:${recipientId}`).emit('notification:new', { notification, message });
+      deliverPush(io, recipientId, conversation.id, {
+        title: notification.title, body: notification.body, conversationId: conversation.id, url: `/?conversation=${conversation.id}`
+      }).catch(error => console.error('Push delivery failed:', error.message));
+    }
+  }
+  res.status(201).json({ message });
+}));
+router.post('/messages/:id/poll/vote', authRequired, asyncHandler(async (req, res) => {
+  if (!validId(req.params.id)) return res.status(404).json({ error: 'Poll not found.' });
+  const data = parse(z.object({ optionIndex: z.number().int().min(0).max(5) }), req.body);
+  const message = await Message.findById(req.params.id);
+  if (!message || message.messageType !== 'poll' || !message.poll || message.deletedAt || !(await membership(message.conversationId, req.user.id))) {
+    return res.status(404).json({ error: 'Poll not found.' });
+  }
+  if (data.optionIndex >= message.poll.options.length) return res.status(400).json({ error: 'That poll option is no longer available.' });
+  if (message.poll.closedAt) return res.status(409).json({ error: 'This poll is closed.' });
+  await Message.updateOne(
+    { _id: message._id, messageType: 'poll', deletedAt: null, 'poll.closedAt': null },
+    [{ $set: { 'poll.votes': {
+      $concatArrays: [
+        { $filter: { input: { $ifNull: ['$poll.votes', []] }, as: 'vote', cond: { $ne: ['$$vote.userId', req.user._id] } } },
+        [{ userId: req.user._id, optionIndex: data.optionIndex, votedAt: new Date() }]
+      ]
+    } } }]
+  );
+  const updated = await Message.findOne({ _id: message._id, 'poll.closedAt': null }).populate('senderId', 'username fullName avatar');
+  if (!updated) return res.status(409).json({ error: 'This poll is closed.' });
+  req.app.get('io').to(`conversation:${message.conversationId}`).emit('message:updated', { message: updated });
+  res.json({ message: updated });
+}));
+router.post('/messages/:id/poll/close', authRequired, asyncHandler(async (req, res) => {
+  if (!validId(req.params.id)) return res.status(404).json({ error: 'Poll not found.' });
+  const poll = await Message.findOne({ _id: req.params.id, senderId: req.user.id, messageType: 'poll', deletedAt: null });
+  if (!poll || !(await membership(poll.conversationId, req.user.id))) return res.status(404).json({ error: 'Poll not found or you cannot close it.' });
+  const message = await Message.findOneAndUpdate(
+    { _id: req.params.id, senderId: req.user.id, messageType: 'poll', deletedAt: null, 'poll.closedAt': null },
+    { $set: { 'poll.closedAt': new Date() } },
+    { new: true }
+  ).populate('senderId', 'username fullName avatar');
+  if (!message) return res.status(404).json({ error: 'Poll not found or already closed.' });
+  req.app.get('io').to(`conversation:${message.conversationId}`).emit('message:updated', { message });
+  res.json({ message });
+}));
 router.patch('/messages/:id', authRequired, asyncHandler(async (req, res) => {
   const data = parse(z.object({ content: z.string().trim().min(1).max(4000) }), req.body);
-  const message = await Message.findOne({ _id: req.params.id, senderId: req.user.id, deletedAt: null });
+  const message = await Message.findOne({ _id: req.params.id, senderId: req.user.id, messageType: 'text', deletedAt: null });
   if (!message) return res.status(404).json({ error: 'Message not found or cannot be edited.' });
   message.content = data.content;
   message.editedAt = new Date();

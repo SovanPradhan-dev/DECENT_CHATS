@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNow, isSameDay, isToday, isYesterday } from 'date-fns';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bell, BellOff, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, File, Image, Info, LogOut, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Settings, ShieldCheck, Shuffle, Smile, Sparkles, UserPlus, Users, Waves, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, BarChart3, Bell, BellOff, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, File, Image, Info, LogOut, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Settings, ShieldCheck, Shuffle, Smile, Sparkles, UserPlus, Users, Waves, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../services/api';
 import { useAppStore } from '../../stores/appStore';
@@ -50,6 +50,11 @@ export default function ChatPage() {
   const [mobileChat, setMobileChat] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(() => window.innerWidth > 820);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [pollComposerOpen, setPollComposerOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollClientMessageId, setPollClientMessageId] = useState('');
+  const [pollSubmitting, setPollSubmitting] = useState(false);
   const [groupMode, setGroupMode] = useState(false);
   const [addToExistingGroup, setAddToExistingGroup] = useState(false);
   const [groupName, setGroupName] = useState('');
@@ -258,6 +263,46 @@ export default function ChatPage() {
       sendWithHttp();
     }
   };
+  const createPoll = async (event) => {
+    event.preventDefault();
+    const question = pollQuestion.trim();
+    const options = pollOptions.map(option => option.trim()).filter(Boolean);
+    if (question.length < 3 || options.length < 2) return;
+    setPollSubmitting(true);
+    try {
+      const { message } = await api(`/conversations/${selectedId}/polls`, { method: 'POST', body: JSON.stringify({ clientMessageId: pollClientMessageId, question, options }) });
+      queryClient.setQueryData(messageKey, old => {
+        if (!old) return old;
+        const exists = old.messages.some(item => item._id === message._id || item.clientMessageId === message.clientMessageId);
+        return { ...old, messages: exists ? old.messages.map(item => item._id === message._id || item.clientMessageId === message.clientMessageId ? message : item) : [...old.messages, message] };
+      });
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      setPollComposerOpen(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      setPollClientMessageId('');
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setPollSubmitting(false);
+    }
+  };
+  const voteInPoll = async (message, optionIndex) => {
+    try {
+      const { message: updated } = await api(`/messages/${message._id}/poll/vote`, { method: 'POST', body: JSON.stringify({ optionIndex }) });
+      queryClient.setQueryData(messageKey, old => old ? { ...old, messages: old.messages.map(item => item._id === updated._id ? updated : item) } : old);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+  const closePoll = async (message) => {
+    try {
+      const { message: updated } = await api(`/messages/${message._id}/poll/close`, { method: 'POST' });
+      queryClient.setQueryData(messageKey, old => old ? { ...old, messages: old.messages.map(item => item._id === updated._id ? updated : item) } : old);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
   const handleTyping = (value) => {
     setDraft(value);
     if (!selectedId || !socket) return;
@@ -386,6 +431,8 @@ export default function ChatPage() {
             const previous = messagesFiltered[index - 1];
             const showDate = !previous || !isSameDay(new Date(previous.createdAt), new Date(message.createdAt));
             const dateLabel = isToday(new Date(message.createdAt)) ? 'Today' : isYesterday(new Date(message.createdAt)) ? 'Yesterday' : format(new Date(message.createdAt), 'MMMM d, yyyy');
+            const pollVotes = message.poll?.votes || [];
+            const ownPollVote = pollVotes.find(vote => String(vote.userId?._id || vote.userId) === user?.id);
             return (<div key={message._id} className="message-block">
               {showDate && <div className="date-divider"><span>{dateLabel}</span></div>}
               <div className={`message-row ${own ? 'own' : ''}`}>
@@ -394,9 +441,21 @@ export default function ChatPage() {
                   {!own && selected.type === 'group' && <span className="message-author">{message.senderId?.fullName}</span>}
                   {message.replyTo && <div className="reply-quote"><span>{message.replyTo.senderId?.fullName || 'Earlier message'}</span><p>{message.replyTo.content || 'Message deleted'}</p></div>}
                   <div className="message-and-tools"><div className={`message-bubble ${own ? 'sent' : 'received'} ${message.deletedAt ? 'deleted' : ''}`}>
-                    {message.deletedAt ? <i>This message was deleted</i> : <><span>{message.content}</span>{message.attachment && <>{message.attachment.mimeType?.startsWith('image/') && <a className="message-image-preview" href={`/api/uploads/${message.attachment._id}`} target="_blank" rel="noreferrer"><img src={`/api/uploads/${message.attachment._id}?inline=1`} alt={message.attachment.originalName} loading="lazy" /></a>}<a className="file-card" href={`/api/uploads/${message.attachment._id}`}><File size={18} /><span><b>{message.attachment.originalName}</b><small>{(message.attachment.size / 1024).toFixed(0)} KB · Download</small></span></a></>}</>}
+                    {message.deletedAt ? <i>This message was deleted</i> : message.messageType === 'poll' && message.poll ? <div className="poll-card">
+                      <span className="poll-kicker"><BarChart3 size={14} /> LIVE POLL {message.poll.closedAt && <span className="poll-closed-label">· CLOSED</span>}</span>
+                      <strong className="poll-question">{message.poll.question}</strong>
+                      <div className="poll-options">{message.poll.options.map((option, optionIndex) => {
+                        const count = pollVotes.filter(vote => vote.optionIndex === optionIndex).length;
+                        const percentage = pollVotes.length ? Math.round(count / pollVotes.length * 100) : 0;
+                        const isSelected = ownPollVote?.optionIndex === optionIndex;
+                        return <button key={`${option}-${optionIndex}`} className={`poll-option ${isSelected ? 'selected' : ''}`} style={{ '--poll-progress': `${percentage}%` }} onClick={() => voteInPoll(message, optionIndex)} disabled={Boolean(message.poll.closedAt) || isSelected} aria-pressed={isSelected}>
+                          <span className="poll-option-label">{option}{isSelected && <small>Your vote</small>}</span><b>{count}</b>
+                        </button>;
+                      })}</div>
+                      <div className="poll-footer"><span>{pollVotes.length} {pollVotes.length === 1 ? 'vote' : 'votes'}{message.poll.closedAt ? ' · Poll closed' : ownPollVote ? ' · Tap an option to change your vote' : ' · Choose an option'}</span>{own && !message.poll.closedAt && <button onClick={() => closePoll(message)}>Close poll</button>}</div>
+                    </div> : <><span>{message.content}</span>{message.attachment && <>{message.attachment.mimeType?.startsWith('image/') && <a className="message-image-preview" href={`/api/uploads/${message.attachment._id}`} target="_blank" rel="noreferrer"><img src={`/api/uploads/${message.attachment._id}?inline=1`} alt={message.attachment.originalName} loading="lazy" /></a>}<a className="file-card" href={`/api/uploads/${message.attachment._id}`}><File size={18} /><span><b>{message.attachment.originalName}</b><small>{(message.attachment.size / 1024).toFixed(0)} KB · Download</small></span></a></>}</>}
                   </div><button className="icon-button message-more" onClick={() => setMenuMessage(menuMessage === message._id ? null : message._id)} aria-label="Message actions"><MoreHorizontal size={17} /></button>
-                    {menuMessage === message._id && <div className="message-menu"><button onClick={() => { setReply(message); setMenuMessage(null); inputRef.current?.focus(); }}>Reply</button><button onClick={() => { navigator.clipboard.writeText(message.content || ''); toast.success('Message copied'); setMenuMessage(null); }}>Copy text</button>{own && !message.deletedAt && <><button onClick={() => { setEditing(message); setDraft(message.content); setMenuMessage(null); inputRef.current?.focus(); }}>Edit</button><button className="danger-text" onClick={async () => { try { await api(`/messages/${message._id}`, { method: 'DELETE' }); queryClient.setQueryData(messageKey, old => ({ ...old, messages: old.messages.map(item => item._id === message._id ? { ...item, deletedAt: new Date().toISOString(), content: '' } : item) })); } catch (error) { toast.error(error.message); } setMenuMessage(null); }}>Delete</button></>}</div>}
+                    {menuMessage === message._id && <div className="message-menu"><button onClick={() => { setReply(message); setMenuMessage(null); inputRef.current?.focus(); }}>Reply</button><button onClick={() => { navigator.clipboard.writeText(message.content || ''); toast.success('Message copied'); setMenuMessage(null); }}>Copy text</button>{own && !message.deletedAt && <>{message.messageType !== 'poll' && <button onClick={() => { setEditing(message); setDraft(message.content); setMenuMessage(null); inputRef.current?.focus(); }}>Edit</button>}<button className="danger-text" onClick={async () => { try { await api(`/messages/${message._id}`, { method: 'DELETE' }); queryClient.setQueryData(messageKey, old => ({ ...old, messages: old.messages.map(item => item._id === message._id ? { ...item, deletedAt: new Date().toISOString(), content: '' } : item) })); } catch (error) { toast.error(error.message); } setMenuMessage(null); }}>Delete</button></>}</div>}
                   </div><span className="message-meta">{format(new Date(message.createdAt), 'h:mm a')}{message.editedAt && <span> · edited</span>}{own && (message.readBy?.length > 1 ? <CheckCheck size={14} className="read-check" /> : <Check size={14} />)}</span></div>
                 </div>
             </div>);
@@ -407,7 +466,7 @@ export default function ChatPage() {
         </section><form className="composer-wrap" onSubmit={sendMessage}>
           {reply && <div className="composer-context"><span>Replying to <b>{reply.senderId?.fullName || 'message'}</b><small>{reply.content}</small></span><button className="icon-button" type="button" onClick={() => setReply(null)}><X size={16} /></button></div>}
           {editing && <div className="composer-context"><span>Editing message</span><button className="icon-button" type="button" onClick={() => { setEditing(null); setDraft(''); }}><X size={16} /></button></div>}
-          <div className="composer"><button className="icon-button composer-attach" type="button" aria-label="Attach file" onClick={() => fileRef.current?.click()} disabled={attachmentBusy}><Paperclip size={19} /></button><input ref={fileRef} type="file" hidden accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt,.doc,.docx,.xls,.xlsx" onChange={event => attachFile(event.target.files?.[0])} /><input ref={inputRef} value={draft} onChange={event => handleTyping(event.target.value)} placeholder={attachmentBusy ? `Uploading file · ${uploadProgress}%` : `Message ${getTitle(selected)}`} maxLength={4000} /><button className="icon-button composer-emoji" type="button" title="Add a smile" onClick={() => handleTyping(`${draft}☺`)}><Smile size={19} /></button><button className="send-button" type="submit" disabled={!draft.trim()} aria-label="Send message"><Send size={17} /></button></div><div className="composer-hint"><span><kbd>Enter</kbd> to send <span>·</span> Keep it kind</span><span>{draft.length}/4000</span></div>
+          <div className="composer"><button className="icon-button composer-attach" type="button" aria-label="Attach file" onClick={() => fileRef.current?.click()} disabled={attachmentBusy}><Paperclip size={19} /></button><input ref={fileRef} type="file" hidden accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt,.doc,.docx,.xls,.xlsx" onChange={event => attachFile(event.target.files?.[0])} /><button className="icon-button composer-poll" type="button" title="Create a poll" aria-label="Create a poll" onClick={() => { setPollClientMessageId(crypto.randomUUID()); setPollComposerOpen(true); }}><BarChart3 size={18} /></button><input ref={inputRef} value={draft} onChange={event => handleTyping(event.target.value)} placeholder={attachmentBusy ? `Uploading file · ${uploadProgress}%` : `Message ${getTitle(selected)}`} maxLength={4000} /><button className="icon-button composer-emoji" type="button" title="Add a smile" onClick={() => handleTyping(`${draft}☺`)}><Smile size={19} /></button><button className="send-button" type="submit" disabled={!draft.trim()} aria-label="Send message"><Send size={17} /></button></div><div className="composer-hint"><span><kbd>Enter</kbd> to send <span>·</span> Keep it kind</span><span>{draft.length}/4000</span></div>
         </form></> : <div className="empty-chat home-dashboard">
           <div className="home-greeting"><span className="eyebrow">YOUR SPACE, IN SYNC</span><div className="home-profile"><span className={`avatar avatar-sm ${initialsColor(user?.fullName)}`}>{avatarInitial(user)}</span><span>{user?.fullName}</span></div></div>
           <section className="home-hero">
@@ -436,6 +495,14 @@ export default function ChatPage() {
           <div className="wave-spark-actions"><button className="text-button" onClick={() => setWaveSparkOffset(offset => offset + 1)}><Shuffle size={14} /> Another spark</button><button className="primary-button small-button" onClick={() => { setDraft(currentDraft => currentDraft.trim() ? `${currentDraft.trim()} ${waveSpark.text}` : waveSpark.text); setWaveSparksOpen(false); inputRef.current?.focus(); }}>Use this spark <ArrowRight size={15} /></button></div>
         </section>
       </div>}
+      {pollComposerOpen && selected && <div className="modal-backdrop" onMouseDown={event => { if (!pollSubmitting && event.target === event.currentTarget) { setPollComposerOpen(false); setPollClientMessageId(''); } }}><form className="new-chat-modal poll-modal" onSubmit={createPoll}>
+        <div className="modal-title"><div><span className="eyebrow">MAKE A DECISION TOGETHER</span><h2>Create a poll</h2></div><button className="icon-button" type="button" disabled={pollSubmitting} onClick={() => { setPollComposerOpen(false); setPollClientMessageId(''); }} aria-label="Close poll creator"><X size={19} /></button></div>
+        <label className="poll-field-label" htmlFor="poll-question">Your question</label>
+        <input id="poll-question" className="modal-input" placeholder="What should we do?" value={pollQuestion} onChange={event => { setPollQuestion(event.target.value); setPollClientMessageId(crypto.randomUUID()); }} maxLength={180} required autoFocus disabled={pollSubmitting} />
+        <div className="poll-options-heading"><label className="poll-field-label">Answer options</label><span>{pollOptions.filter(option => option.trim()).length}/6</span></div>
+        <div className="poll-option-inputs">{pollOptions.map((option, index) => <div key={index}><input className="modal-input" aria-label={`Option ${index + 1}`} placeholder={`Option ${index + 1}`} value={option} onChange={event => { setPollOptions(current => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item)); setPollClientMessageId(crypto.randomUUID()); }} maxLength={80} disabled={pollSubmitting} />{pollOptions.length > 2 && <button className="icon-button" type="button" aria-label={`Remove option ${index + 1}`} disabled={pollSubmitting} onClick={() => { setPollOptions(current => current.filter((_, itemIndex) => itemIndex !== index)); setPollClientMessageId(crypto.randomUUID()); }}><X size={16} /></button>}</div>)}</div>
+        <div className="poll-modal-footer"><button className="text-button" type="button" onClick={() => { setPollOptions(current => current.length < 6 ? [...current, ''] : current); setPollClientMessageId(crypto.randomUUID()); }} disabled={pollOptions.length >= 6 || pollSubmitting}><Plus size={14} /> Add option</button><button className="primary-button small-button" type="submit" disabled={pollSubmitting || pollQuestion.trim().length < 3 || pollOptions.filter(option => option.trim()).length < 2}><BarChart3 size={15} /> {pollSubmitting ? 'Creating…' : 'Start poll'}</button></div>
+      </form></div>}
       {newChatOpen && <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) closeNewChat(); }}><div className="new-chat-modal">
         <div className="modal-title"><div><span className="eyebrow">{addToExistingGroup ? 'GROW THE GROUP' : 'A NEW CONVERSATION'}</span><h2>{groupMode ? addToExistingGroup ? `Add people to ${getTitle(selected)}` : 'Bring your people together' : 'Who’s on your mind?'}</h2></div><button className="icon-button" onClick={closeNewChat}><X size={19} /></button></div>
         {groupMode && !addToExistingGroup && <input className="modal-input" placeholder="Give your group a name" value={groupName} onChange={event => setGroupName(event.target.value)} maxLength={80} />}
