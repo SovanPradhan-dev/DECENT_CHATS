@@ -78,7 +78,7 @@ export default function ChatPage() {
   const conversations = conversationsQuery.data?.conversations || [];
   const selectedId = params.get('conversation') || null;
   const selected = conversations.find(c => c._id === selectedId);
-  const dailySparkSeed = `${new Date().toISOString().slice(0, 10)}:${selectedId || ''}`.split('').reduce((seed, character) => (seed * 31 + character.charCodeAt(0)) >>> 0, 7);
+  const dailySparkSeed = `${format(new Date(), 'yyyy-MM-dd')}:${selectedId || ''}`.split('').reduce((seed, character) => (seed * 31 + character.charCodeAt(0)) >>> 0, 7);
   const availableSparks = wavePrompts[selected?.type === 'group' ? 'group' : 'private'];
   const waveSpark = availableSparks[(dailySparkSeed + waveSparkOffset) % availableSparks.length];
   useEffect(() => {
@@ -432,7 +432,7 @@ export default function ChatPage() {
         <section className="wave-spark-card" role="dialog" aria-modal="true" aria-labelledby="wave-spark-title">
           <div className="wave-spark-heading"><div><span className="eyebrow">A DAILY CHATWAVE RITUAL</span><h2 id="wave-spark-title">A spark for {getTitle(selected)}</h2></div><button className="icon-button" onClick={() => setWaveSparksOpen(false)} aria-label="Close Wave Sparks"><X size={18} /></button></div>
           <div className="wave-spark-prompt"><span><Sparkles size={14} /> {waveSpark.category} <span>·</span> {format(new Date(), 'EEEE, MMMM d')}</span><p>{waveSpark.text}</p></div>
-          <p className="wave-spark-note">A fresh prompt each day, picked for this kind of conversation. No bots, no data leaves your device.</p>
+          <p className="wave-spark-note">A fresh prompt each day, picked for this kind of conversation. No bot needed to get a good conversation going.</p>
           <div className="wave-spark-actions"><button className="text-button" onClick={() => setWaveSparkOffset(offset => offset + 1)}><Shuffle size={14} /> Another spark</button><button className="primary-button small-button" onClick={() => { setDraft(currentDraft => currentDraft.trim() ? `${currentDraft.trim()} ${waveSpark.text}` : waveSpark.text); setWaveSparksOpen(false); inputRef.current?.focus(); }}>Use this spark <ArrowRight size={15} /></button></div>
         </section>
       </div>}
