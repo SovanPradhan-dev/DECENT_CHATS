@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, formatDistanceToNow, isSameDay, isToday, isYesterday } from 'date-fns';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bell, BellOff, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, File, Image, Info, LogOut, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Settings, ShieldCheck, Smile, Sparkles, UserPlus, Users, Waves, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Bell, BellOff, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, File, Image, Info, LogOut, MessageCircle, MoreHorizontal, Paperclip, Plus, Search, Send, Settings, ShieldCheck, Shuffle, Smile, Sparkles, UserPlus, Users, Waves, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../services/api';
 import { useAppStore } from '../../stores/appStore';
@@ -10,6 +10,30 @@ import { useSocket } from '../../socket/SocketProvider';
 
 const avatarInitial = (person) => (person?.fullName || person?.username || '?').slice(0, 1).toUpperCase();
 const initialsColor = (text = '') => ['avatar-violet', 'avatar-blue', 'avatar-pink', 'avatar-green', 'avatar-orange'][text.charCodeAt(0) % 5];
+const wavePrompts = {
+  private: [
+    { category: 'A little deeper', text: 'What is something small that made today better?' },
+    { category: 'A little deeper', text: 'What is something you are looking forward to this week?' },
+    { category: 'A little deeper', text: 'What is one thing you wish you had more time for?' },
+    { category: 'Just for fun', text: 'If you could teleport anywhere for dinner tonight, where would we go?' },
+    { category: 'Just for fun', text: 'What song instantly takes you back to a favorite memory?' },
+    { category: 'Just for fun', text: 'What harmless opinion will you defend forever?' },
+    { category: 'Make a plan', text: 'What is one new thing we should try together?' },
+    { category: 'Make a plan', text: 'Pick a free afternoon: outdoors, good food, or a cozy night in?' },
+    { category: 'Make a plan', text: 'What would make this weekend feel like a mini adventure?' }
+  ],
+  group: [
+    { category: 'A little deeper', text: 'Everyone share one small win from this week.' },
+    { category: 'A little deeper', text: 'What is something you learned recently that surprised you?' },
+    { category: 'A little deeper', text: 'What is one thing this group should celebrate soon?' },
+    { category: 'Just for fun', text: 'Build a group playlist: what is the first song you are adding?' },
+    { category: 'Just for fun', text: 'Which fictional world would this group survive best in?' },
+    { category: 'Just for fun', text: 'Give the group a silly team name. Best one wins.' },
+    { category: 'Make a plan', text: 'What is one low-effort thing we should all do together?' },
+    { category: 'Make a plan', text: 'Choose our next group hangout: food, games, or getting outside?' },
+    { category: 'Make a plan', text: 'Add one idea to our group bucket list.' }
+  ]
+};
 
 export default function ChatPage() {
   const user = useAppStore(state => state.user);
@@ -42,6 +66,8 @@ export default function ChatPage() {
   const [mobileDrawer, setMobileDrawer] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [waveSparksOpen, setWaveSparksOpen] = useState(false);
+  const [waveSparkOffset, setWaveSparkOffset] = useState(0);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const fileRef = useRef(null);
@@ -52,6 +78,9 @@ export default function ChatPage() {
   const conversations = conversationsQuery.data?.conversations || [];
   const selectedId = params.get('conversation') || null;
   const selected = conversations.find(c => c._id === selectedId);
+  const dailySparkSeed = `${new Date().toISOString().slice(0, 10)}:${selectedId || ''}`.split('').reduce((seed, character) => (seed * 31 + character.charCodeAt(0)) >>> 0, 7);
+  const availableSparks = wavePrompts[selected?.type === 'group' ? 'group' : 'private'];
+  const waveSpark = availableSparks[(dailySparkSeed + waveSparkOffset) % availableSparks.length];
   useEffect(() => {
     setMuted(Boolean(user?.preferences?.mutedConversations?.includes(selectedId)));
   }, [selectedId, user?.preferences?.mutedConversations]);
@@ -75,6 +104,8 @@ export default function ChatPage() {
     setMobileChat(true);
     setMobileDrawer(false);
     setReply(null);
+    setWaveSparkOffset(0);
+    setWaveSparksOpen(false);
   };
   const closeNewChat = () => {
     setNewChatOpen(false);
@@ -344,7 +375,7 @@ export default function ChatPage() {
       <main className="chat-main">
         <header className="chat-header">
           <button className="icon-button mobile-menu" onClick={() => mobileChat ? (setMobileChat(false), setParams({})) : setMobileDrawer(true)} aria-label={mobileChat ? 'Back to conversations' : 'Open menu'}>{mobileChat ? <ArrowLeft size={20} /> : <ChevronLeft size={20} />}</button>
-          {selected ? <><div className={`avatar header-avatar ${selected.type === 'group' ? 'avatar-group' : initialsColor(getTitle(selected))}`}>{selected.type === 'group' ? <Users size={17} /> : avatarInitial(getPeer(selected))}</div><div className="chat-title"><strong>{getTitle(selected)}</strong><span>{selected.type === 'group' ? `${selected.participants.length} members` : onlineUsers.has(String(getPeer(selected)?._id)) ? <><i className="online-indicator" /> Online now</> : `Last seen ${formatDistanceToNow(new Date(getPeer(selected)?.lastSeen || Date.now()), { addSuffix: true })}`}</span></div><div className="header-actions"><div className="search-box message-search"><Search size={16} /><input placeholder="Find in chat" value={messageSearch} onChange={event => setMessageSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') searchMessages(); if (event.key === 'Escape') { setMessageSearch(''); queryClient.invalidateQueries({ queryKey: messageKey }); } }} /></div><button className={`icon-button ${muted ? 'is-muted' : ''}`} title={muted ? 'Unmute conversation' : 'Mute conversation'} onClick={toggleMute}>{muted ? <BellOff size={18} /> : <Bell size={18} />}</button><button className={`icon-button details-toggle ${detailsOpen ? 'selected-icon' : ''}`} onClick={() => setDetailsOpen(!detailsOpen)} aria-label="Conversation details"><Info size={18} /></button></div></> : <div className="chat-title welcome-title"><strong>Your conversations</strong><span>A little closer, wherever you are.</span></div>}
+          {selected ? <><div className={`avatar header-avatar ${selected.type === 'group' ? 'avatar-group' : initialsColor(getTitle(selected))}`}>{selected.type === 'group' ? <Users size={17} /> : avatarInitial(getPeer(selected))}</div><div className="chat-title"><strong>{getTitle(selected)}</strong><span>{selected.type === 'group' ? `${selected.participants.length} members` : onlineUsers.has(String(getPeer(selected)?._id)) ? <><i className="online-indicator" /> Online now</> : `Last seen ${formatDistanceToNow(new Date(getPeer(selected)?.lastSeen || Date.now()), { addSuffix: true })}`}</span></div><div className="header-actions"><div className="search-box message-search"><Search size={16} /><input placeholder="Find in chat" value={messageSearch} onChange={event => setMessageSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') searchMessages(); if (event.key === 'Escape') { setMessageSearch(''); queryClient.invalidateQueries({ queryKey: messageKey }); } }} /></div><button className={`icon-button wave-spark-toggle ${waveSparksOpen ? 'selected-icon' : ''}`} title="Open today's Wave Spark" aria-label="Open today's Wave Spark" aria-expanded={waveSparksOpen} onClick={() => setWaveSparksOpen(!waveSparksOpen)}><Sparkles size={18} /></button><button className={`icon-button ${muted ? 'is-muted' : ''}`} title={muted ? 'Unmute conversation' : 'Mute conversation'} onClick={toggleMute}>{muted ? <BellOff size={18} /> : <Bell size={18} />}</button><button className={`icon-button details-toggle ${detailsOpen ? 'selected-icon' : ''}`} onClick={() => setDetailsOpen(!detailsOpen)} aria-label="Conversation details"><Info size={18} /></button></div></> : <div className="chat-title welcome-title"><strong>Your conversations</strong><span>A little closer, wherever you are.</span></div>}
         </header>
         {selected ? <><section className={`message-area ${draggingFiles ? 'file-dragging' : ''}`} onDragOver={event => { if (event.dataTransfer.types.includes('Files')) { event.preventDefault(); setDraggingFiles(true); } }} onDragLeave={event => { if (event.currentTarget === event.target) setDraggingFiles(false); }} onDrop={event => { event.preventDefault(); setDraggingFiles(false); attachFile(event.dataTransfer.files?.[0]); }}>
           {draggingFiles && <div className="drop-overlay"><Paperclip size={22} /><b>Drop a file to share</b><span>Images, documents, and PDFs up to 10 MB</span></div>}
@@ -397,6 +428,14 @@ export default function ChatPage() {
         {selected.type === 'group' && selected.groupInfo?.admins?.some(id => String(id) === user?.id) && <button className="delete-group" onClick={async () => { if (!window.confirm(`Permanently delete "${getTitle(selected)}" and its messages?`)) return; try { await api(`/conversations/${selectedId}`, { method: 'DELETE' }); await queryClient.invalidateQueries({ queryKey: ['conversations'] }); setParams({}); setMobileChat(false); toast.success('Group deleted.'); } catch (error) { toast.error(error.message); } }}>Delete group</button>}
         <div className="details-footer">Made for meaningful moments <Waves size={14} /></div>
       </aside>}
+      {waveSparksOpen && selected && <div className="wave-spark-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setWaveSparksOpen(false); }}>
+        <section className="wave-spark-card" role="dialog" aria-modal="true" aria-labelledby="wave-spark-title">
+          <div className="wave-spark-heading"><div><span className="eyebrow">A DAILY CHATWAVE RITUAL</span><h2 id="wave-spark-title">A spark for {getTitle(selected)}</h2></div><button className="icon-button" onClick={() => setWaveSparksOpen(false)} aria-label="Close Wave Sparks"><X size={18} /></button></div>
+          <div className="wave-spark-prompt"><span><Sparkles size={14} /> {waveSpark.category} <span>·</span> {format(new Date(), 'EEEE, MMMM d')}</span><p>{waveSpark.text}</p></div>
+          <p className="wave-spark-note">A fresh prompt each day, picked for this kind of conversation. No bots, no data leaves your device.</p>
+          <div className="wave-spark-actions"><button className="text-button" onClick={() => setWaveSparkOffset(offset => offset + 1)}><Shuffle size={14} /> Another spark</button><button className="primary-button small-button" onClick={() => { setDraft(currentDraft => currentDraft.trim() ? `${currentDraft.trim()} ${waveSpark.text}` : waveSpark.text); setWaveSparksOpen(false); inputRef.current?.focus(); }}>Use this spark <ArrowRight size={15} /></button></div>
+        </section>
+      </div>}
       {newChatOpen && <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) closeNewChat(); }}><div className="new-chat-modal">
         <div className="modal-title"><div><span className="eyebrow">{addToExistingGroup ? 'GROW THE GROUP' : 'A NEW CONVERSATION'}</span><h2>{groupMode ? addToExistingGroup ? `Add people to ${getTitle(selected)}` : 'Bring your people together' : 'Who’s on your mind?'}</h2></div><button className="icon-button" onClick={closeNewChat}><X size={19} /></button></div>
         {groupMode && !addToExistingGroup && <input className="modal-input" placeholder="Give your group a name" value={groupName} onChange={event => setGroupName(event.target.value)} maxLength={80} />}
