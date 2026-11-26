@@ -386,7 +386,7 @@ export default function ChatPage() {
   return (
     <div className={`chat-shell ${mobileChat ? 'mobile-chat-open' : ''} ${detailsOpen ? 'details-expanded' : ''}`}>
       <aside className={`sidebar ${mobileDrawer ? 'drawer-open' : ''}`}>
-        <div className="sidebar-brand"><div className="brand-mark"><Waves size={19} /></div><span>ChatWave</span><button className="mobile-close icon-button" onClick={() => setMobileDrawer(false)} aria-label="Close menu"><X size={18} /></button></div>
+        <div className="sidebar-brand"><div className="brand-mark"><Waves size={19} /></div><span>BroCode</span><button className="mobile-close icon-button" onClick={() => setMobileDrawer(false)} aria-label="Close menu"><X size={18} /></button></div>
         <div className="profile-card">
           <div className={`avatar avatar-lg ${initialsColor(user?.fullName)}`}>{avatarInitial(user)}</div>
           <div className="profile-copy"><strong>{user?.fullName}</strong><span>@{user?.username}</span></div>
@@ -489,7 +489,7 @@ export default function ChatPage() {
       </aside>}
       {waveSparksOpen && selected && <div className="wave-spark-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setWaveSparksOpen(false); }}>
         <section className="wave-spark-card" role="dialog" aria-modal="true" aria-labelledby="wave-spark-title">
-          <div className="wave-spark-heading"><div><span className="eyebrow">A DAILY CHATWAVE RITUAL</span><h2 id="wave-spark-title">A spark for {getTitle(selected)}</h2></div><button className="icon-button" onClick={() => setWaveSparksOpen(false)} aria-label="Close Wave Sparks"><X size={18} /></button></div>
+          <div className="wave-spark-heading"><div><span className="eyebrow">A DAILY BroCode RITUAL</span><h2 id="wave-spark-title">A spark for {getTitle(selected)}</h2></div><button className="icon-button" onClick={() => setWaveSparksOpen(false)} aria-label="Close Wave Sparks"><X size={18} /></button></div>
           <div className="wave-spark-prompt"><span><Sparkles size={14} /> {waveSpark.category} <span>·</span> {format(new Date(), 'EEEE, MMMM d')}</span><p>{waveSpark.text}</p></div>
           <p className="wave-spark-note">A fresh prompt each day, picked for this kind of conversation. No bot needed to get a good conversation going.</p>
           <div className="wave-spark-actions"><button className="text-button" onClick={() => setWaveSparkOffset(offset => offset + 1)}><Shuffle size={14} /> Another spark</button><button className="primary-button small-button" onClick={() => { setDraft(currentDraft => currentDraft.trim() ? `${currentDraft.trim()} ${waveSpark.text}` : waveSpark.text); setWaveSparksOpen(false); inputRef.current?.focus(); }}>Use this spark <ArrowRight size={15} /></button></div>

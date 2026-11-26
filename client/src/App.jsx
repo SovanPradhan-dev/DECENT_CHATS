@@ -63,7 +63,7 @@ function RealtimeEvents() {
         } catch (error) { console.warn('Notification sound is unavailable:', error.message); }
       }
       if (user?.preferences?.desktopNotifications && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
-        const notice = new Notification(notification?.title || 'New message', { body: notification?.body, icon: '/icons/chatwave.svg', tag: notification?.conversationId });
+        const notice = new Notification(notification?.title || 'New message', { body: notification?.body, icon: '/icons/BroCode.svg', tag: notification?.conversationId });
         notice.onclick = () => { window.focus(); navigate(`/?conversation=${notification.conversationId}`); notice.close(); };
       }
     };

@@ -6,10 +6,10 @@
   font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   color-scheme: dark;
   --bg: #0b0d14;
-  --sidebar: #111522;
-  --surface: #171c2b;
-  --card: #1b2233;
-  --raised: #20283a;
+  --sidebar: rgba(17, 21, 34, 0.55);
+  --surface: rgba(23, 28, 43, 0.55);
+  --card: rgba(27, 34, 51, 0.6);
+  --raised: rgba(32, 40, 58, 0.6);
   --accent: #7966f5;
   --accent-2: #a78bfa;
   --accent-soft: rgba(121, 102, 245, .14);
@@ -30,10 +30,10 @@
 :root[data-theme='light'] {
   color-scheme: light;
   --bg: #f6f7fb;
-  --sidebar: #fff;
-  --surface: #fff;
-  --card: #fff;
-  --raised: #f3f4f8;
+  --sidebar: rgba(255, 255, 255, 0.55);
+  --surface: rgba(255, 255, 255, 0.55);
+  --card: rgba(255, 255, 255, 0.6);
+  --raised: rgba(243, 244, 248, 0.65);
   --accent: #6957e8;
   --accent-2: #8a71ed;
   --accent-soft: rgba(105,87,232,.10);
@@ -327,7 +327,7 @@ kbd { border:1px solid var(--border-strong);border-radius:4px;color:var(--dim);p
   *,*::before,*::after { animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important; }
 }
 
-/* ChatWave visual refresh */
+/* BroCode visual refresh */
 :root {
   --bg: #0c0e13;
   --sidebar: #101218;
@@ -568,3 +568,453 @@ button,a,input,textarea { -webkit-tap-highlight-color:transparent; }
   .wave-spark-prompt { padding:17px; }
   .wave-spark-prompt p { font-size:17px; }
 }
+
+/* ============================================================
+   iOS 26 Liquid Glass — full UI skin
+   Restyles existing components/pages only. No layout or logic.
+   ============================================================ */
+
+/* ---- Glass tokens (theme-aware) ---- */
+:root {
+  --glass-fill: rgba(28, 28, 34, calc(0.30 * var(--glass-alpha-mult, 1)));
+  --glass-tint: rgba(255, 255, 255, calc(0.06 * var(--glass-alpha-mult, 1)));
+  --glass-tint-strong: rgba(255, 255, 255, calc(0.13 * var(--glass-alpha-mult, 1)));
+  --glass-border: rgba(255, 255, 255, 0.20);
+  --glass-border-soft: rgba(255, 255, 255, 0.11);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  --glass-shadow: 0 16px 48px rgba(0, 0, 0, 0.38);
+  --glass-alpha-mult: 1;
+  --glass-blur-mult: 1;
+  --glass-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root[data-theme='light'] {
+  --glass-fill: rgba(255, 255, 255, calc(0.04 * var(--glass-alpha-mult, 1)));
+  --glass-tint: rgba(255, 255, 255, calc(0.24 * var(--glass-alpha-mult, 1)));
+  --glass-tint-strong: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --glass-border-soft: rgba(120, 116, 160, 0.18);
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(120, 116, 160, 0.08);
+  --glass-shadow: 0 16px 48px rgba(39, 35, 68, 0.16);
+}
+:root[data-theme='light'] body,
+:root[data-theme='light'] .auth-page,
+:root[data-theme='light'] .chat-shell,
+:root[data-theme='light'] .settings-page,
+:root[data-theme='light'] .message-area,
+:root[data-theme='light'] .home-dashboard {
+  background:
+    radial-gradient(ellipse 70% 60% at 10% 0%, rgba(136, 118, 242, 0.45), transparent 55%),
+    radial-gradient(ellipse 60% 55% at 100% 100%, rgba(96, 165, 250, 0.35), transparent 55%),
+    radial-gradient(ellipse 50% 45% at 50% 50%, rgba(236, 72, 153, 0.20), transparent 60%),
+    #f4f3f9;
+}
+
+/* ---- Page depth so content refracts behind glass ---- */
+body,
+.auth-page,
+.chat-shell,
+.settings-page,
+.message-area,
+.home-dashboard {
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 0%, rgba(136, 118, 242, 0.26), transparent 60%),
+    radial-gradient(ellipse 50% 45% at 100% 100%, rgba(96, 165, 250, 0.18), transparent 60%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, rgba(236, 72, 153, 0.08), transparent 65%),
+    var(--bg);
+}
+
+/* ---- .liquid-glass utility (real backdrop blur) ---- */
+.liquid-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 45%), var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: blur(calc(22px * var(--glass-blur-mult, 1))) saturate(180%);
+  -webkit-backdrop-filter: blur(calc(22px * var(--glass-blur-mult, 1))) saturate(180%);
+}
+
+/* ---- Floating chrome: header, sidebar, bars, modals, popovers ---- */
+.chat-header,
+.sidebar,
+.settings-topbar,
+.details-panel.open,
+.new-chat-modal,
+.notification-popover,
+.auth-card,
+.settings-nav,
+.wave-spark-card,
+.liquid-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 45%), var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: blur(calc(22px * var(--glass-blur-mult, 1))) saturate(180%);
+  -webkit-backdrop-filter: blur(calc(22px * var(--glass-blur-mult, 1))) saturate(180%);
+}
+.chat-header { border-radius: 0 0 24px 24px; }
+.sidebar { border-radius: 0 24px 24px 0; }
+.settings-topbar { border-radius: 0 0 24px 24px; }
+.details-panel.open { border-radius: 24px 0 0 24px; }
+.new-chat-modal { border-radius: 28px; }
+.notification-popover { border-radius: 24px; }
+.auth-card { border-radius: 24px; }
+.settings-nav { border-radius: 24px; }
+.wave-spark-card { border-radius: 24px; }
+.chat-header { position: sticky; top: 0; z-index: 100; }
+.settings-topbar { position: sticky; top: 0; z-index: 100; }
+
+/* Chromium edge-refraction filter */
+@supports (backdrop-filter: url(#ios-liquid-glass)) {
+  .liquid-glass,
+  .chat-header,
+  .sidebar,
+  .settings-topbar,
+  .details-panel.open,
+  .new-chat-modal,
+  .notification-popover,
+  .auth-card,
+  .settings-nav,
+  .wave-spark-card,
+  .composer,
+  .file-card,
+  .scroll-bottom,
+  .message-bubble.received,
+  .message-menu,
+  .reply-quote,
+  .composer-context,
+  .home-quick-card,
+  .home-conversation,
+  .poll-card,
+  .wave-spark-prompt,
+  .selected-user-chips button,
+  .home-hero {
+    backdrop-filter: url(#ios-liquid-glass) blur(calc(10px * var(--glass-blur-mult, 1))) saturate(190%);
+  }
+}
+
+/* ---- Overlays / scrims ---- */
+.modal-backdrop,
+.wave-spark-backdrop {
+  background: rgba(6, 8, 16, 0.55);
+  backdrop-filter: blur(calc(22px * var(--glass-blur-mult, 1))) saturate(180%);
+  -webkit-backdrop-filter: blur(calc(22px * var(--glass-blur-mult, 1))) saturate(180%);
+}
+.drop-overlay {
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(calc(14px * var(--glass-blur-mult, 1))) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(14px * var(--glass-blur-mult, 1))) saturate(160%);
+  border-radius: 20px;
+}
+
+/* ---- Inner glass surfaces (page-level: light blur + refraction) ---- */
+.composer,
+.file-card,
+.scroll-bottom,
+.message-bubble.received,
+.message-menu,
+.reply-quote,
+.composer-context,
+.home-quick-card,
+.home-conversation,
+.poll-card,
+.wave-spark-prompt,
+.selected-user-chips button,
+.home-hero {
+  backdrop-filter: url(#ios-liquid-glass) blur(calc(8px * var(--glass-blur-mult, 1))) saturate(160%);
+  -webkit-backdrop-filter: blur(calc(8px * var(--glass-blur-mult, 1))) saturate(160%);
+}
+
+/* ---- Inner glass surfaces (translucent tint, no stacked blur) ---- */
+.profile-card,
+.search-box,
+.composer,
+.file-card,
+.scroll-bottom,
+.user-results,
+.theme-choice,
+.security-form,
+.admin-stats > div,
+.notification-preview,
+.add-members-button,
+.poll-card,
+.reply-quote,
+.composer-context,
+.home-quick-card,
+.home-conversation,
+.message-bubble.received,
+.message-menu,
+.selected-user-chips button,
+.wave-spark-prompt {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), transparent 50%), var(--glass-tint);
+  border: 1px solid var(--glass-border-soft);
+  box-shadow: var(--glass-highlight);
+}
+
+/* ---- Form fields ---- */
+.field input,
+.settings-form input,
+.settings-form textarea,
+.modal-input,
+.admin-search,
+.composer,
+.search-box {
+  background: var(--glass-tint);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-highlight);
+}
+.field input:focus,
+.settings-form input:focus,
+.settings-form textarea:focus,
+.modal-input:focus,
+.admin-search:focus,
+.composer:focus-within,
+.search-box:focus-within {
+  border-color: rgba(160, 140, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(121, 102, 245, 0.14), var(--glass-highlight);
+}
+
+/* ---- List rows ---- */
+.conversation-row,
+.nav-row,
+.settings-nav-items button,
+.filter-tabs button,
+.user-result,
+.message-menu button,
+.member-row,
+.setting-option,
+.session-row {
+  border-radius: 12px;
+  transition: background .18s ease, border-color .18s ease,
+              box-shadow .18s ease, color .18s ease,
+              transform .18s var(--glass-spring);
+}
+.conversation-row:hover,
+.nav-row:hover,
+.settings-nav-items button:hover,
+.filter-tabs button:hover,
+.user-result:hover,
+.message-menu button:hover,
+.member-row:hover,
+.setting-option:hover,
+.session-row:hover {
+  background: var(--glass-tint);
+  box-shadow: var(--glass-highlight);
+}
+.conversation-row.active,
+.filter-tabs button.selected,
+.settings-nav-items button.active {
+  background: var(--glass-tint-strong);
+  box-shadow: var(--glass-highlight), inset 2px 0 0 var(--accent);
+}
+
+/* ---- .liquid-glass-interactive utility ---- */
+.liquid-glass-interactive {
+  transition: transform .18s var(--glass-spring),
+              background .18s ease,
+              border-color .18s ease,
+              box-shadow .18s ease,
+              color .18s ease;
+}
+.liquid-glass-interactive:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.015);
+  background: var(--glass-tint-strong);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+.liquid-glass-interactive:active:not(:disabled) {
+  transform: translateY(0) scale(.97);
+}
+.liquid-glass-interactive:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
+
+/* ---- Interactive controls: spring hover / press across the UI ---- */
+.primary-button,
+.icon-button,
+.subtle-button,
+.danger-button,
+.send-button,
+.auth-submit,
+.text-button,
+.text-link,
+.filter-tabs button,
+.nav-row,
+.settings-nav-items button,
+.user-result,
+.home-quick-card,
+.home-conversation,
+.add-members-button,
+.notification-preview,
+.scroll-bottom,
+.message-menu button,
+.selected-user-chips button,
+.load-older,
+.delete-group,
+.leave-group,
+.conversation-row,
+.toggle,
+.select-check {
+  transition: transform .18s var(--glass-spring),
+              background .18s ease,
+              border-color .18s ease,
+              box-shadow .18s ease,
+              color .18s ease;
+}
+.primary-button:hover:not(:disabled),
+.icon-button:hover,
+.subtle-button:hover:not(:disabled),
+.danger-button:hover:not(:disabled),
+.send-button:not(:disabled):hover,
+.auth-submit:hover:not(:disabled),
+.home-quick-card:hover,
+.home-conversation:hover,
+.add-members-button:hover,
+.notification-preview:hover,
+.scroll-bottom:hover,
+.conversation-row:hover {
+  transform: translateY(-1px);
+}
+.primary-button:active:not(:disabled),
+.icon-button:active,
+.subtle-button:active:not(:disabled),
+.danger-button:active:not(:disabled),
+.send-button:not(:disabled):active,
+.auth-submit:active:not(:disabled),
+.home-quick-card:active,
+.home-conversation:active,
+.add-members-button:active,
+.notification-preview:active,
+.scroll-bottom:active,
+.conversation-row:active {
+  transform: translateY(0) scale(.97);
+}
+
+/* ---- Pill controls ---- */
+.primary-button,
+.subtle-button,
+.auth-submit,
+.danger-button,
+.send-button,
+.add-members-button,
+.notification-preview,
+.selected-user-chips button,
+.filter-tabs button {
+  border-radius: 999px;
+}
+.icon-button,
+.admin-search,
+.modal-input,
+.field input,
+.settings-form input {
+  border-radius: 999px;
+}
+.settings-form textarea {
+  border-radius: 18px;
+}
+
+/* ---- Home dashboard surfaces ---- */
+.home-hero {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 50%), var(--glass-tint-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+
+/* ---- Grouped glass panels so every page is fully glass ---- */
+.settings-section {
+  padding: 26px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 55%), var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: blur(calc(18px * var(--glass-blur-mult, 1))) saturate(170%);
+  -webkit-backdrop-filter: blur(calc(18px * var(--glass-blur-mult, 1))) saturate(170%);
+}
+.settings-options,
+.sessions-section,
+.security-action,
+.admin-stats > div,
+.admin-user-row,
+.admin-message-row,
+.session-row,
+.theme-choice,
+.notification-preview,
+.member-row,
+.user-result,
+.profile-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 55%), var(--glass-tint);
+  border: 1px solid var(--glass-border-soft);
+  box-shadow: var(--glass-highlight);
+}
+.settings-options { padding: 4px 14px; border-radius: 20px; border-top: 0; }
+.setting-option { border-radius: 14px; margin: 2px 0; padding: 0 10px; border-bottom: 0; }
+.settings-options .setting-option + .setting-option { box-shadow: inset 0 1px 0 var(--glass-border-soft); }
+.sessions-section,
+.security-action { padding: 4px 16px; border-radius: 20px; }
+.security-action { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; }
+.admin-stats > div { border-radius: 16px; }
+.admin-user-row,
+.admin-message-row { border-radius: 14px; padding: 8px 12px; margin-bottom: 6px; border-bottom: 0; }
+.session-row { border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; border-bottom: 0; }
+.theme-choice { border-radius: 18px; }
+.notification-preview { border-radius: 16px; }
+.profile-card { border-radius: 18px; }
+
+/* Glossy controls everywhere */
+.primary-button,
+.send-button,
+.auth-submit,
+.subtle-button,
+.danger-button,
+.icon-button,
+.toggle {
+  box-shadow: var(--glass-highlight), 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+
+/* Glass controls (settings) ---- */
+.glass-controls {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--glass-border-soft);
+  display: grid;
+  gap: 14px;
+}
+.glass-controls h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.glass-slider {
+  display: grid;
+  gap: 6px;
+}
+.glass-slider span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.glass-slider span b {
+  color: var(--text);
+  font-weight: 600;
+}
+.glass-slider span small {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.glass-slider input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass-interactive,
+  .primary-button, .icon-button, .subtle-button, .danger-button,
+  .send-button, .auth-submit, .home-quick-card, .home-conversation,
+  .conversation-row, .nav-row, .settings-nav-items button {
+    transition-duration: .01ms;
+  }
+}
+

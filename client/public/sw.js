@@ -1,11 +1,11 @@
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
-  event.waitUntil(self.registration.showNotification(data.title || 'ChatWave', {
+  event.waitUntil(self.registration.showNotification(data.title || 'BroCode', {
     body: data.body || 'You have a new message.',
-    icon: '/icons/chatwave.svg',
-    badge: '/icons/chatwave.svg',
-    tag: data.conversationId || 'ChatWave-message',
+    icon: '/icons/BroCode.svg',
+    badge: '/icons/BroCode.svg',
+    tag: data.conversationId || 'BroCode-message',
     data: { url: data.url || '/' }
   }));
 });

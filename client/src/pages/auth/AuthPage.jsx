@@ -36,7 +36,7 @@ export default function AuthPage({ mode }) {
       const { user } = await api(isRegister ? '/auth/register' : '/auth/login', { method: 'POST', body: JSON.stringify(isRegister ? { ...body, acceptedTerms } : body) });
       setUser(user);
       queryClient.setQueryData(['me'], { user });
-      toast.success(isRegister ? 'Your ChatWave space is ready.' : `Welcome back, ${user.fullName.split(' ')[0]}.`);
+      toast.success(isRegister ? 'Your BroCode space is ready.' : `Welcome back, ${user.fullName.split(' ')[0]}.`);
       navigate('/', { replace: true });
     } catch (error) { toast.error(error.message); }
     finally { setBusy(false); }
@@ -45,7 +45,7 @@ export default function AuthPage({ mode }) {
     <main className="auth-page">
       <div className="auth-decoration decor-one" /><div className="auth-decoration decor-two" />
       <section className="auth-brand">
-        <div className="brand-lockup"><div className="brand-mark"><Waves size={22} /></div><span>ChatWave</span></div>
+        <div className="brand-lockup"><div className="brand-mark"><Waves size={22} /></div><span>BroCode</span></div>
         <div className="brand-story">
           <div className="eyebrow"><span className="status-dot" /> YOUR PEOPLE, IN SYNC</div>
           <h1>Conversations<br />that <span>move with you.</span></h1>
@@ -55,7 +55,7 @@ export default function AuthPage({ mode }) {
       </section>
       <section className="auth-panel">
         <div className="auth-card">
-          <div className="mobile-brand brand-lockup"><div className="brand-mark"><Waves size={20} /></div><span>ChatWave</span></div>
+          <div className="mobile-brand brand-lockup"><div className="brand-mark"><Waves size={20} /></div><span>BroCode</span></div>
           <div className="auth-heading"><span className="eyebrow">{isRegister ? 'A BETTER WAY TO STAY CLOSE' : 'YOUR SPACE IS WAITING'}</span><h2>{isRegister ? 'Create your account' : 'Welcome back'}</h2><p>{isRegister ? 'Start conversations that feel a little more human.' : 'Pick up right where your conversations left off.'}</p></div>
           <form onSubmit={handleSubmit(submit)} className="auth-form">
             {isRegister && <Field label="Full name" placeholder="Alex Morgan" autoComplete="name" error={errors.fullName?.message} {...register('fullName')} />}
@@ -66,13 +66,13 @@ export default function AuthPage({ mode }) {
               <div className="password-wrap"><input id="password" type={visible ? 'text' : 'password'} placeholder={isRegister ? 'At least 10 characters' : 'Enter your password'} autoComplete={isRegister ? 'new-password' : 'current-password'} {...register('password')} /><button className="icon-button password-toggle" type="button" onClick={() => setVisible(!visible)} aria-label={visible ? 'Hide password' : 'Show password'}>{visible ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
               {errors.password && <span className="field-error">{errors.password.message}</span>}
             </div>
-            {isRegister && <><div className="strength" aria-label={`Password strength ${strength} of 4`}><div className="strength-bars">{[1, 2, 3, 4].map(level => <span key={level} className={strength >= level ? `active strength-${strength}` : ''} />)}</div><span>{password ? ['Too short', 'Getting there', 'Good', 'Strong', 'Excellent'][strength] : 'Password strength'}</span></div><Field label="Confirm password" placeholder="Enter your password again" type="password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register('confirmPassword')} /><label className="checkbox-line"><input type="checkbox" {...register('acceptedTerms')} /><span>I agree to the <a href="#terms" onClick={e => { e.preventDefault(); toast.info('Use ChatWave respectfully. Do not share unlawful or harmful content.'); }}>terms of service</a></span></label>{errors.acceptedTerms && <span className="field-error">{errors.acceptedTerms.message}</span>}</>}
-            {!isRegister && <div className="form-meta"><label className="checkbox-line"><input type="checkbox" {...register('remember')} /><span>Remember me</span></label><button type="button" className="text-link" onClick={() => toast.info('Password recovery is not configured. Contact your ChatWave administrator to reset your account securely.')}>Forgot password?</button></div>}
+            {isRegister && <><div className="strength" aria-label={`Password strength ${strength} of 4`}><div className="strength-bars">{[1, 2, 3, 4].map(level => <span key={level} className={strength >= level ? `active strength-${strength}` : ''} />)}</div><span>{password ? ['Too short', 'Getting there', 'Good', 'Strong', 'Excellent'][strength] : 'Password strength'}</span></div><Field label="Confirm password" placeholder="Enter your password again" type="password" autoComplete="new-password" error={errors.confirmPassword?.message} {...register('confirmPassword')} /><label className="checkbox-line"><input type="checkbox" {...register('acceptedTerms')} /><span>I agree to the <a href="#terms" onClick={e => { e.preventDefault(); toast.info('Use BroCode respectfully. Do not share unlawful or harmful content.'); }}>terms of service</a></span></label>{errors.acceptedTerms && <span className="field-error">{errors.acceptedTerms.message}</span>}</>}
+            {!isRegister && <div className="form-meta"><label className="checkbox-line"><input type="checkbox" {...register('remember')} /><span>Remember me</span></label><button type="button" className="text-link" onClick={() => toast.info('Password recovery is not configured. Contact your BroCode administrator to reset your account securely.')}>Forgot password?</button></div>}
             <button type="submit" className="primary-button auth-submit" disabled={busy}>{busy ? <span className="spinner" /> : <>{isRegister ? 'Create account' : 'Sign in'} <ArrowRight size={17} /></>}</button>
           </form>
-          <div className="auth-switch">{isRegister ? 'Already part of the conversation?' : 'New to ChatWave?'} <Link to={isRegister ? '/login' : '/register'}>{isRegister ? 'Sign in' : 'Create an account'}</Link></div>
+          <div className="auth-switch">{isRegister ? 'Already part of the conversation?' : 'New to BroCode?'} <Link to={isRegister ? '/login' : '/register'}>{isRegister ? 'Sign in' : 'Create an account'}</Link></div>
         </div>
-        <div className="auth-legal">© 2026 ChatWave <span>·</span> Thoughtfully connected.</div>
+        <div className="auth-legal">© 2026 BroCode <span>·</span> Thoughtfully connected.</div>
       </section>
     </main>
   );
